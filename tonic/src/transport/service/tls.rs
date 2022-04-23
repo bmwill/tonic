@@ -88,6 +88,17 @@ impl TlsConnector {
         })
     }
 
+    #[cfg(feature = "tls")]
+    pub(crate) fn new_with_rustls_raw(
+        config: tokio_rustls::rustls::ClientConfig,
+        domain: String,
+    ) -> Result<Self, crate::Error> {
+        Ok(Self {
+            config: Arc::new(config),
+            domain: Arc::new(domain.as_str().try_into()?),
+        })
+    }
+
     pub(crate) async fn connect<I>(&self, io: I) -> Result<BoxedIo, crate::Error>
     where
         I: AsyncRead + AsyncWrite + Send + Unpin + 'static,
@@ -149,6 +160,15 @@ impl TlsAcceptor {
         })
     }
 
+    #[cfg(feature = "tls")]
+    pub(crate) fn new_with_rustls_raw(
+        config: tokio_rustls::rustls::ServerConfig,
+    ) -> Result<Self, crate::Error> {
+        Ok(Self {
+            inner: Arc::new(config),
+        })
+    }
+
     pub(crate) async fn accept<IO>(&self, io: IO) -> Result<TlsStream<IO>, crate::Error>
     where
         IO: AsyncRead + AsyncWrite + Connected + Unpin + Send + 'static,
@@ -185,8 +205,7 @@ mod rustls_keys {
 
     use tokio_rustls::rustls::{Certificate, PrivateKey, RootCertStore};
 
-    use crate::transport::service::tls::TlsError;
-    use crate::transport::Identity;
+    use crate::transport::{service::tls::TlsError, Identity};
 
     fn load_rustls_private_key(
         mut cursor: std::io::Cursor<&[u8]>,

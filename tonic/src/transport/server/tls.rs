@@ -11,6 +11,7 @@ use std::fmt;
 pub struct ServerTlsConfig {
     identity: Option<Identity>,
     client_ca_root: Option<Certificate>,
+    rustls_raw: Option<tokio_rustls::rustls::ServerConfig>,
 }
 
 #[cfg(feature = "tls")]
@@ -27,6 +28,7 @@ impl ServerTlsConfig {
         ServerTlsConfig {
             identity: None,
             client_ca_root: None,
+            rustls_raw: None,
         }
     }
 
@@ -46,7 +48,20 @@ impl ServerTlsConfig {
         }
     }
 
+    /// Use options specified by the given `ServerConfig` to configure TLS.
+    ///
+    /// This overrides all other TLS options set via other means.
+    pub fn rustls_server_config(self, config: tokio_rustls::rustls::ServerConfig) -> Self {
+        ServerTlsConfig {
+            rustls_raw: Some(config),
+            ..self
+        }
+    }
+
     pub(crate) fn tls_acceptor(&self) -> Result<TlsAcceptor, crate::Error> {
-        TlsAcceptor::new(self.identity.clone().unwrap(), self.client_ca_root.clone())
+        match &self.rustls_raw {
+            None => TlsAcceptor::new(self.identity.clone().unwrap(), self.client_ca_root.clone()),
+            Some(config) => TlsAcceptor::new_with_rustls_raw(config.clone()),
+        }
     }
 }
