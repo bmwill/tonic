@@ -2,9 +2,11 @@ use super::{client, server, Attributes};
 use proc_macro2::TokenStream;
 use prost_build::{Config, Method, Service};
 use quote::ToTokens;
-use std::ffi::OsString;
-use std::io;
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsString,
+    io,
+    path::{Path, PathBuf},
+};
 
 /// Configure `tonic-build` code generation.
 ///
@@ -21,6 +23,7 @@ pub fn configure() -> Builder {
         server_attributes: Attributes::default(),
         client_attributes: Attributes::default(),
         proto_path: "super".to_string(),
+        codec_path: PROST_CODEC_PATH.to_string(),
         compile_well_known_types: false,
         emit_package: true,
         protoc_args: Vec::new(),
@@ -156,6 +159,7 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
                 &service,
                 self.builder.emit_package,
                 &self.builder.proto_path,
+                &self.builder.codec_path,
                 self.builder.compile_well_known_types,
                 &self.builder.server_attributes,
             );
@@ -167,6 +171,7 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
                 &service,
                 self.builder.emit_package,
                 &self.builder.proto_path,
+                &self.builder.codec_path,
                 self.builder.compile_well_known_types,
                 &self.builder.client_attributes,
             );
@@ -217,6 +222,7 @@ pub struct Builder {
     pub(crate) server_attributes: Attributes,
     pub(crate) client_attributes: Attributes,
     pub(crate) proto_path: String,
+    pub(crate) codec_path: String,
     pub(crate) emit_package: bool,
     pub(crate) compile_well_known_types: bool,
     pub(crate) protoc_args: Vec<OsString>,
@@ -326,6 +332,15 @@ impl Builder {
     /// This defaults to `super` since tonic will generate code in a module.
     pub fn proto_path(mut self, proto_path: impl AsRef<str>) -> Self {
         self.proto_path = proto_path.as_ref().to_string();
+        self
+    }
+
+    /// Set the path to the codec that will be used to encode/decode payloads. Requires that the
+    /// provided codec impls `Default`.
+    ///
+    /// This defaults to `tonic::codec::ProstCodec` which is a protobuf codec.
+    pub fn codec_path(mut self, codec_path: impl AsRef<str>) -> Self {
+        self.codec_path = codec_path.as_ref().to_string();
         self
     }
 

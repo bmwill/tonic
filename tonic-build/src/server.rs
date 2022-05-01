@@ -12,10 +12,11 @@ pub fn generate<T: Service>(
     service: &T,
     emit_package: bool,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
     attributes: &Attributes,
 ) -> TokenStream {
-    let methods = generate_methods(service, proto_path, compile_well_known_types);
+    let methods = generate_methods(service, proto_path, codec_path, compile_well_known_types);
 
     let server_service = quote::format_ident!("{}Server", service.name());
     let server_trait = quote::format_ident!("{}", service.name());
@@ -295,6 +296,7 @@ fn generate_transport(
 fn generate_methods<T: Service>(
     service: &T,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
 ) -> TokenStream {
     let mut stream = TokenStream::new();
@@ -319,6 +321,7 @@ fn generate_methods<T: Service>(
             (false, false) => generate_unary(
                 method,
                 proto_path,
+                codec_path,
                 compile_well_known_types,
                 ident,
                 server_trait,
@@ -327,6 +330,7 @@ fn generate_methods<T: Service>(
             (false, true) => generate_server_streaming(
                 method,
                 proto_path,
+                codec_path,
                 compile_well_known_types,
                 ident.clone(),
                 server_trait,
@@ -334,6 +338,7 @@ fn generate_methods<T: Service>(
             (true, false) => generate_client_streaming(
                 method,
                 proto_path,
+                codec_path,
                 compile_well_known_types,
                 ident.clone(),
                 server_trait,
@@ -342,6 +347,7 @@ fn generate_methods<T: Service>(
             (true, true) => generate_streaming(
                 method,
                 proto_path,
+                codec_path,
                 compile_well_known_types,
                 ident.clone(),
                 server_trait,
@@ -362,11 +368,12 @@ fn generate_methods<T: Service>(
 fn generate_unary<T: Method>(
     method: &T,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
     method_ident: Ident,
     server_trait: Ident,
 ) -> TokenStream {
-    let codec_name = syn::parse_str::<syn::Path>(T::CODEC_PATH).unwrap();
+    let codec_name = syn::parse_str::<syn::Path>(codec_path).unwrap();
 
     let service_ident = quote::format_ident!("{}Svc", method.identifier());
 
@@ -411,11 +418,12 @@ fn generate_unary<T: Method>(
 fn generate_server_streaming<T: Method>(
     method: &T,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
     method_ident: Ident,
     server_trait: Ident,
 ) -> TokenStream {
-    let codec_name = syn::parse_str::<syn::Path>(T::CODEC_PATH).unwrap();
+    let codec_name = syn::parse_str::<syn::Path>(codec_path).unwrap();
 
     let service_ident = quote::format_ident!("{}Svc", method.identifier());
 
@@ -463,6 +471,7 @@ fn generate_server_streaming<T: Method>(
 fn generate_client_streaming<T: Method>(
     method: &T,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
     method_ident: Ident,
     server_trait: Ident,
@@ -470,7 +479,7 @@ fn generate_client_streaming<T: Method>(
     let service_ident = quote::format_ident!("{}Svc", method.identifier());
 
     let (request, response) = method.request_response_name(proto_path, compile_well_known_types);
-    let codec_name = syn::parse_str::<syn::Path>(T::CODEC_PATH).unwrap();
+    let codec_name = syn::parse_str::<syn::Path>(codec_path).unwrap();
 
     quote! {
         #[allow(non_camel_case_types)]
@@ -513,11 +522,12 @@ fn generate_client_streaming<T: Method>(
 fn generate_streaming<T: Method>(
     method: &T,
     proto_path: &str,
+    codec_path: &str,
     compile_well_known_types: bool,
     method_ident: Ident,
     server_trait: Ident,
 ) -> TokenStream {
-    let codec_name = syn::parse_str::<syn::Path>(T::CODEC_PATH).unwrap();
+    let codec_name = syn::parse_str::<syn::Path>(codec_path).unwrap();
 
     let service_ident = quote::format_ident!("{}Svc", method.identifier());
 
